@@ -168,6 +168,15 @@ input[type=text] { font: 700 16px var(--body); color: var(--ink); background: va
 .slot.next { outline: 3px solid var(--sun); outline-offset: -3px; color: var(--ink); animation: nudge 1.8s ease-in-out infinite }
 @keyframes nudge { 50% { transform: translateY(-3px) } }
 
+.mode { display: grid; grid-template-columns: 1fr 1fr; gap: 8px }
+.mode button { background: var(--card); border: 2px solid var(--line); border-radius: 18px; padding: 12px 14px 11px; text-align: left; transition: transform .15s, background .2s }
+.mode button:active { transform: scale(.96) }
+.mode b { display: block; font: 800 19px/1.1 var(--disp) }
+.mode small { display: block; margin-top: 3px; font-size: 13px; font-weight: 700; color: var(--muted) }
+.mode button[aria-checked="true"] { background: var(--puls); border-color: var(--puls); color: #fff }
+.mode button[aria-checked="true"] small { color: #fff; opacity: .85 }
+.belt { animation: belt .55s linear infinite }
+@keyframes belt { to { transform: translateX(-14px) } }
 .split { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px }
 .split button { background: var(--card); border: 2px solid var(--line); border-radius: 18px; padding: 12px 4px 10px; text-align: center; transition: transform .15s, background .2s }
 .split button:active { transform: scale(.94) }
@@ -286,7 +295,12 @@ select { font: 700 16px var(--body); color: var(--ink); background: var(--card);
   </section>
 
   <section>
-    <div class="lab"><span>Split your 15 minutes</span></div>
+    <div class="lab"><span>Activity</span></div>
+    <div class="mode" id="mode" role="radiogroup" aria-label="Activity">
+      <button role="radio" data-m="ex"><b>Exercises</b><small>chair and desk</small></button>
+      <button role="radio" data-m="mill"><b>Treadmill</b><small>walk it off</small></button>
+    </div>
+    <div class="lab" style="margin-top:16px"><span>Split your 15 minutes</span></div>
     <div class="split" id="split" role="radiogroup" aria-label="How the 15 minutes are split">
       <button role="radio" data-s="1"><b>15 × 1</b><small>min</small></button>
       <button role="radio" data-s="5"><b>3 × 5</b><small>min</small></button>
@@ -433,6 +447,7 @@ function normalize(r) {
   if (!r.work || !(r.work.to > r.work.from)) r.work = { from: 8, to: 16 };
   if (r.sound !== false) r.sound = true;
   r.tot = r.tot > 0 ? r.tot : 0;
+  if (r.mode !== 'mill') r.mode = 'ex';
   r.own = Array.isArray(r.own) ? r.own : [];
   if (!r.wear || typeof r.wear !== 'object') r.wear = { hat: null, acc: null };
   if (!r.buddy || typeof r.buddy !== 'object') r.buddy = newBuddy();
@@ -633,6 +648,11 @@ EX.push(
     steps: ['Stand with feet slightly wider than your hips, toes turned out a little.', 'Lower slowly all the way down. Hold the desk if you like.', 'Rest at the bottom and gently press your knees outward.'],
     tip: 'Not getting all the way down? Put a book under your heels.' }
 );
+EX.push({ id: 'mølle', name: 'Treadmill walk', type: 'puls', props: ['mill'], tempo: 1.1,
+  A: { hip: [100, 117], t: 4, h: 0, feet: [[80, 176], [121, 173]], arms: [{ a: 30, e: .95 }, { a: -24, e: .95 }] },
+  B: { hip: [100, 115], t: 4, h: 0, feet: [[121, 176], [80, 171]], arms: [{ a: -24, e: .95 }, { a: 30, e: .95 }] },
+  steps: ['Start the treadmill at a comfortable walking pace, around 4 to 5 km/h.', 'Walk tall, look ahead and let your arms swing naturally.', 'Feeling fresh? Raise the pace or the incline for the last minute.'],
+  tip: 'Hold the rails only for balance when you step on and off.' });
 EX.forEach(e => { byId[e.id] = e; });
 ['knebøy', 'kneløft', 'utfall'].forEach(id => byId[id].hip = true);
 ['benstrekk', 'kneløft', 'utfall'].forEach(id => byId[id].sides = true);
@@ -670,6 +690,7 @@ const VAR = {
   'hofteheng':     { lett: 'Go only halfway down.', proff: 'Do it on one leg, with the other extended behind.' },
   'benpendel':     { lett: 'Small, gentle swings.', proff: 'Swing higher, without holding the desk.' },
   'firetall':      { lett: 'Sit upright and let the knee sink on its own.', proff: 'Lean all the way forward and rest your forearms on your shin.' },
+  'mølle':         { lett: 'Keep a relaxed pace, around 3 to 4 km/h.', proff: 'Walk briskly at 5.5 to 6.5 km/h, or add some incline.' },
   'dypsitt':       { lett: 'Go only as deep as you can with heels on the floor.', proff: 'Let go of the desk and raise your arms overhead.' }
 };
 if (!LEVELS[S.level]) S.level = 'middels';
@@ -701,6 +722,15 @@ function buildFig(ex) {
     if (p === 'chairSeat') chair(svg, 62);
     if (p === 'deskFront') desk(svg, 152, 118);
     if (p === 'deskNear') desk(svg, 118, 114);
+    if (p === 'mill') {
+      mk('rect', { x: 46, y: 177, width: 128, height: 9, rx: 4.5, fill: C.ink }, svg);
+      const belt = mk('g', { class: 'belt' }, svg);
+      for (let x = 52; x < 170; x += 14) mk('rect', { x, y: 179.5, width: 6, height: 2.4, rx: 1.2, fill: 'rgba(255,255,255,.35)' }, belt);
+      mk('line', { x1: 164, y1: 180, x2: 150, y2: 104, stroke: C.ink, 'stroke-width': 5, 'stroke-linecap': 'round' }, svg);
+      mk('rect', { x: 136, y: 94, width: 30, height: 14, rx: 4, fill: C.ink }, svg);
+      mk('rect', { x: 141, y: 98, width: 13, height: 6, rx: 1.5, fill: '#FFC93C' }, svg);
+      mk('line', { x1: 150, y1: 116, x2: 124, y2: 118, stroke: C.ink, 'stroke-width': 4, 'stroke-linecap': 'round' }, svg);
+    }
   });
   const L = (stroke, w) => mk('polyline', { fill: 'none', stroke, 'stroke-width': w, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, svg);
   const parts = {};
@@ -1045,9 +1075,12 @@ function renderHome() {
   const mood = renderBuddy(), bn = S.buddy.name;
   const why = { egg: 'hatches the egg', sulten: `${bn} is hungry`, bekymret: `${bn} is waiting for food`, syk: `${bn} needs you today`, 'fornøyd': `more food for ${bn}`, utslitt: `${bn} needs a full day`, sover: lvl().label }[mood];
   $('cta-t').textContent = goal ? 'Do an extra session' : `Start session ${done + 1} of ${n}`;
-  $('cta-s').textContent = goal ? `${lt} min · anything over 15 is a bonus` : `${lt} min · ${why}`;
+  const how = S.mode === 'mill' ? ' treadmill' : '';
+  $('cta-s').textContent = goal ? `${lt} min${how} · anything over 15 is a bonus` : `${lt} min${how} · ${why}`;
+  document.querySelectorAll('#mode button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.m === S.mode)));
 }
 document.querySelectorAll('#split button').forEach(b => b.addEventListener('click', () => { S.split = parseFloat(b.dataset.s); save(); renderHome(); }));
+document.querySelectorAll('#mode button').forEach(b => b.addEventListener('click', () => { S.mode = b.dataset.m; save(); renderHome(); }));
 $('cta').onclick = () => startSession(S.split);
 
 /* ---------- sheets ---------- */
@@ -1108,6 +1141,7 @@ let sess = null, wake = null;
 function buildPlan(minutes, onlyId) {
   const total = minutes * 60;
   if (onlyId) return [{ ex: R(byId[onlyId]), work: total, rest: 0 }];
+  if (S.mode === 'mill') return [{ ex: R(byId['mølle']), work: total, rest: 0 }];
   const n = Math.max(1, Math.floor(minutes));
   let ids;
   if (n === 1) { ids = [ONE[S.aptr % ONE.length]]; S.aptr++; }
@@ -1304,7 +1338,7 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 setInterval(refresh, 60000);
 
 /* ---------- touch scrolling when embedded in a frame that blocks native scrolling (itch.io) ---------- */
-const VERSION = '1.5';
+const VERSION = '1.6';
 let framed = false;
 try { framed = window.self !== window.top; } catch (e) { framed = true; }
 $('ver').textContent = 'Multi ' + VERSION + (framed ? ' · embedded' : '');
